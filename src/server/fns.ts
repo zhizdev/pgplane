@@ -7,7 +7,7 @@ import {
   getUser,
   loginWithPassword,
   logout,
-  usingDefaultPassword,
+  passwordConfigError,
   type User,
 } from './auth'
 import { connectionInfo, withSql } from './db'
@@ -41,17 +41,17 @@ export const meFn = createServerFn({ method: 'GET' }).handler(async () => {
   return {
     user,
     mode: effectiveMode(),
-    connection: connectionInfo(),
-    usingDefaultPassword: usingDefaultPassword(),
+    lockdown: passwordConfigError(), // string reason when password auth is unsafe/unset, else null
+    // Don't leak connection details to unauthenticated callers.
+    connection: user ? connectionInfo() : null,
   }
 })
 
 export const loginFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => z.object({ password: z.string().min(1) }).parse(d))
   .handler(async ({ data }) => {
-    const user = await loginWithPassword(data.password)
-    if (!user) return { ok: false as const, error: 'Incorrect password' }
-    return { ok: true as const }
+    const res = await loginWithPassword(data.password)
+    return res.ok ? { ok: true as const } : { ok: false as const, error: res.error }
   })
 
 export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {

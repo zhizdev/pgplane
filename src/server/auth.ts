@@ -97,7 +97,9 @@ export async function getUser(): Promise<User | null> {
     return await verifyCfAccess()
   }
 
-  // password mode → signed session cookie
+  // password mode → signed session cookie.
+  // Fail closed: if password auth isn't securely configured, trust no session.
+  if (passwordConfigError() !== null) return null
   const session = await getAppSession()
   if (session.data?.email && session.data.role) {
     return { email: session.data.email, role: session.data.role, via: 'password' }
@@ -113,21 +115,48 @@ export function canAdmin(user: User | null): boolean {
   return user?.role === 'admin'
 }
 
-/** True when the deployment is using the built-in password fallback with the
- * default/weak password — surfaced in the UI as a warning. */
-export function usingDefaultPassword(): boolean {
-  return effectiveMode() === 'password' && envStr('ADMIN_PASSWORD', '') === ''
+const MIN_SESSION_SECRET = 32
+
+/**
+ * Fail-closed gate for password auth. Returns a human-readable reason that
+ * password sign-in is unavailable, or null when it's safely configured.
+ *
+ * Without these the app would otherwise fall back to a well-known password
+ * and a public session-signing key, so instead we refuse to authenticate
+ * anyone (and every guarded API rejects, since getUser() returns null).
+ */
+export function passwordConfigError(): string | null {
+  if (envStr('ADMIN_PASSWORD').length === 0) {
+    return 'No ADMIN_PASSWORD is configured — password sign-in is disabled.'
+  }
+  if (envStr('SESSION_SECRET').length < MIN_SESSION_SECRET) {
+    return `SESSION_SECRET is missing or shorter than ${MIN_SESSION_SECRET} characters — sessions cannot be secured.`
+  }
+  return null
 }
 
-const DEFAULT_PASSWORD = 'pgplane'
+/** Constant-time comparison (relative to the expected length). */
+function timingSafeEqual(input: string, expected: string): boolean {
+  const enc = new TextEncoder()
+  const a = enc.encode(input)
+  const b = enc.encode(expected)
+  let diff = a.length ^ b.length
+  for (let i = 0; i < b.length; i++) diff |= (a[i] ?? 0) ^ b[i]
+  return diff === 0
+}
 
-export async function loginWithPassword(password: string): Promise<User | null> {
-  const expected = envStr('ADMIN_PASSWORD') || DEFAULT_PASSWORD
-  if (password !== expected) return null
+export async function loginWithPassword(
+  password: string,
+): Promise<{ ok: true; user: User } | { ok: false; error: string }> {
+  const configError = passwordConfigError()
+  if (configError) return { ok: false, error: configError } // fail closed
+  if (!timingSafeEqual(password, envStr('ADMIN_PASSWORD'))) {
+    return { ok: false, error: 'Incorrect password' }
+  }
   const user: User = { email: 'admin', role: 'admin', via: 'password' }
   const session = await getAppSession()
   await session.update({ email: user.email, role: user.role, at: Date.now() })
-  return user
+  return { ok: true, user }
 }
 
 export async function logout() {

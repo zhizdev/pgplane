@@ -14,7 +14,7 @@ export const Route = createFileRoute('/_app')({
 function AppLayout() {
   const me = Route.useLoaderData()
   return (
-    <AppShell user={me.user!} connection={me.connection}>
+    <AppShell user={me.user!} connection={me.connection!}>
       <Outlet />
     </AppShell>
   )
