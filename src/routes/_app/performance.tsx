@@ -107,7 +107,7 @@ function Td({
 function TopQueries({ data }: { data: Awaited<ReturnType<typeof topQueriesFn>> }) {
   if (data === null) {
     return (
-      <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+      <div className="rounded-lg border border-border bg-surface-100 p-6 text-sm text-muted-foreground">
         <code>pg_stat_statements</code> is not enabled on this database. Enable it (add to{' '}
         <code>shared_preload_libraries</code> and run{' '}
         <code>CREATE EXTENSION pg_stat_statements;</code>) to see aggregated query performance.
@@ -115,9 +115,9 @@ function TopQueries({ data }: { data: Awaited<ReturnType<typeof topQueriesFn>> }
     )
   }
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="rounded-lg border border-border bg-surface-100 overflow-hidden">
       <table className="w-full text-sm border-collapse">
-        <thead className="border-b border-border bg-muted/30">
+        <thead className="border-b border-border bg-surface-200/50">
           <tr>
             <Th>Query</Th>
             <Th className="text-right">Calls</Th>
@@ -129,7 +129,7 @@ function TopQueries({ data }: { data: Awaited<ReturnType<typeof topQueriesFn>> }
         </thead>
         <tbody className="divide-y divide-border">
           {data.map((q, i) => (
-            <tr key={q.queryid ?? i} className="hover:bg-accent/30">
+            <tr key={q.queryid ?? i} className="hover:bg-surface-200/50">
               <Td className="max-w-xl">
                 <code className="block truncate font-mono text-xs text-foreground/90" title={q.query}>
                   {q.query}
@@ -152,9 +152,9 @@ function TopQueries({ data }: { data: Awaited<ReturnType<typeof topQueriesFn>> }
 
 function ActivityTable({ data }: { data: Awaited<ReturnType<typeof activityFn>> }) {
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="rounded-lg border border-border bg-surface-100 overflow-hidden">
       <table className="w-full text-sm border-collapse">
-        <thead className="border-b border-border bg-muted/30">
+        <thead className="border-b border-border bg-surface-200/50">
           <tr>
             <Th>PID</Th>
             <Th>State</Th>
@@ -166,7 +166,7 @@ function ActivityTable({ data }: { data: Awaited<ReturnType<typeof activityFn>> 
         </thead>
         <tbody className="divide-y divide-border">
           {data.map((a) => (
-            <tr key={a.pid} className="hover:bg-accent/30">
+            <tr key={a.pid} className="hover:bg-surface-200/50">
               <Td className="tabular-nums">{a.pid}</Td>
               <Td>
                 <Badge variant={a.state === 'active' ? 'default' : 'secondary'}>
@@ -200,9 +200,9 @@ function ActivityTable({ data }: { data: Awaited<ReturnType<typeof activityFn>> 
 
 function TablesTable({ data }: { data: Awaited<ReturnType<typeof tableSizesFn>> }) {
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="rounded-lg border border-border bg-surface-100 overflow-hidden">
       <table className="w-full text-sm border-collapse">
-        <thead className="border-b border-border bg-muted/30">
+        <thead className="border-b border-border bg-surface-200/50">
           <tr>
             <Th>Table</Th>
             <Th className="text-right">Est. rows</Th>
@@ -214,7 +214,7 @@ function TablesTable({ data }: { data: Awaited<ReturnType<typeof tableSizesFn>> 
         </thead>
         <tbody className="divide-y divide-border">
           {data.map((t) => (
-            <tr key={`${t.schema}.${t.name}`} className="hover:bg-accent/30">
+            <tr key={`${t.schema}.${t.name}`} className="hover:bg-surface-200/50">
               <Td className="font-mono text-xs">
                 {t.schema}.{t.name}
               </Td>
@@ -235,9 +235,9 @@ function TablesTable({ data }: { data: Awaited<ReturnType<typeof tableSizesFn>> 
 
 function IndexesTable({ data }: { data: Awaited<ReturnType<typeof indexStatsFn>> }) {
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="rounded-lg border border-border bg-surface-100 overflow-hidden">
       <table className="w-full text-sm border-collapse">
-        <thead className="border-b border-border bg-muted/30">
+        <thead className="border-b border-border bg-surface-200/50">
           <tr>
             <Th>Index</Th>
             <Th>Table</Th>
@@ -248,7 +248,7 @@ function IndexesTable({ data }: { data: Awaited<ReturnType<typeof indexStatsFn>>
         </thead>
         <tbody className="divide-y divide-border">
           {data.map((ix) => (
-            <tr key={`${ix.schema}.${ix.index}`} className="hover:bg-accent/30">
+            <tr key={`${ix.schema}.${ix.index}`} className="hover:bg-surface-200/50">
               <Td className="font-mono text-xs">{ix.index}</Td>
               <Td className="font-mono text-xs text-muted-foreground">
                 {ix.schema}.{ix.table}

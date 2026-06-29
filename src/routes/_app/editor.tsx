@@ -8,6 +8,7 @@ import {
   Loader2,
   Plus,
   RefreshCw,
+  Search,
   Table2,
   X,
 } from 'lucide-react'
@@ -98,6 +99,11 @@ function EditorPage() {
   const [filters, setFilters] = useState<RowFilter[]>([])
   const [showFilters, setShowFilters] = useState(false)
   const [insertOpen, setInsertOpen] = useState(false)
+  const [tableSearch, setTableSearch] = useState('')
+
+  const visibleTables = tables.filter((t) =>
+    t.name.toLowerCase().includes(tableSearch.toLowerCase()),
+  )
 
   const offset = page * PAGE_SIZE
   const queryKey = ['rows', schema, table, page, sort, filters] as const
@@ -203,13 +209,14 @@ function EditorPage() {
 
       <div className="flex min-h-0 flex-1">
         {/* table list */}
-        <div className="flex w-64 shrink-0 flex-col border-r border-border">
-          <div className="p-3 border-b border-border">
+        <div className="flex w-64 shrink-0 flex-col border-r border-border bg-sidebar">
+          <div className="space-y-2 border-b border-border p-3">
             <Select
               value={schema}
               onValueChange={(v) => navigate({ to: '/editor', search: { schema: v } })}
             >
               <SelectTrigger className="w-full">
+                <span className="mr-1 text-muted-foreground">schema</span>
                 <SelectValue placeholder="Schema" />
               </SelectTrigger>
               <SelectContent>
@@ -220,24 +227,47 @@ function EditorPage() {
                 ))}
               </SelectContent>
             </Select>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={tableSearch}
+                onChange={(e) => setTableSearch(e.target.value)}
+                placeholder="Search tables..."
+                className="h-8 pl-8 text-[13px]"
+              />
+            </div>
           </div>
-          <div className="flex-1 overflow-auto p-2 space-y-0.5">
-            {tables.map((t) => (
+          <div className="flex items-center justify-between px-3 pt-2.5 pb-1 text-[11px] font-medium uppercase tracking-[0.04em] text-muted-foreground">
+            <span>Tables</span>
+            <span className="tabular-nums">{visibleTables.length}</span>
+          </div>
+          <div className="flex-1 overflow-auto px-2 pb-2 space-y-px">
+            {visibleTables.map((t) => (
               <button
                 key={t.name}
                 onClick={() => selectTable(t.name)}
                 className={cn(
-                  'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-sm hover:bg-accent text-left',
-                  t.name === table && 'bg-accent',
+                  'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] transition-colors',
+                  t.name === table
+                    ? 'bg-surface-200 text-foreground ring-1 ring-inset ring-border'
+                    : 'text-foreground/70 hover:bg-surface-200/60 hover:text-foreground',
                 )}
               >
-                <Table2 className="size-3.5 shrink-0 text-muted-foreground" />
+                <Table2
+                  className={cn(
+                    'size-3.5 shrink-0',
+                    t.name === table ? 'text-primary' : 'text-muted-foreground',
+                  )}
+                />
                 <span className="truncate font-mono text-[13px]">{t.name}</span>
-                <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+                <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">
                   {formatCompact(t.estRows)}
                 </span>
               </button>
             ))}
+            {visibleTables.length === 0 ? (
+              <div className="px-2.5 py-4 text-[13px] text-muted-foreground">No tables match.</div>
+            ) : null}
           </div>
         </div>
 
@@ -285,7 +315,7 @@ function EditorPage() {
               </div>
 
               {/* pagination footer */}
-              <div className="flex h-11 shrink-0 items-center gap-3 border-t border-border px-4 text-xs">
+              <div className="flex h-10 shrink-0 items-center gap-3 border-t border-border bg-sidebar px-4 text-xs">
                 <span className="text-muted-foreground">
                   {data ? (
                     <>
@@ -363,11 +393,11 @@ function FilterBar({
     onChange(filters.filter((_, idx) => idx !== i))
   }
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/20 px-4 py-2">
+    <div className="flex flex-wrap items-center gap-2 border-b border-border bg-sidebar px-4 py-2">
       {filters.map((f, i) => {
         const noValue = f.op === 'is_null' || f.op === 'not_null'
         return (
-          <div key={i} className="flex items-center gap-1 rounded-md border border-border bg-card px-1 py-1">
+          <div key={i} className="flex items-center gap-1 rounded-md border border-border bg-surface-100 px-1 py-1">
             <Select value={f.column} onValueChange={(v) => update(i, { column: v })}>
               <SelectTrigger className="h-7 border-0 text-xs font-mono w-36">
                 <SelectValue />

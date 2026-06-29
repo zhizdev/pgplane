@@ -56,22 +56,22 @@ export function EditableGrid({
     <div className="h-full w-full overflow-auto">
       <table className="border-collapse text-sm" style={{ minWidth: '100%' }}>
         <thead className="sticky top-0 z-10">
-          <tr className="bg-card">
-            <th className="sticky left-0 z-20 w-12 border-b border-r border-border bg-card px-2 py-1.5" />
+          <tr className="bg-surface-100">
+            <th className="sticky left-0 z-20 w-12 border-b border-r border-border bg-surface-100 px-2 py-2" />
             {columns.map((c) => {
               const active = sort?.col === c.name
               return (
                 <th
                   key={c.name}
-                  className="border-b border-r border-border bg-card px-3 py-1.5 text-left font-medium whitespace-nowrap cursor-pointer hover:bg-accent/50 select-none"
+                  className="border-b border-r border-border bg-surface-100 px-3 py-2 text-left font-medium whitespace-nowrap cursor-pointer hover:bg-surface-200 select-none"
                   style={{ minWidth: 150 }}
                   onClick={() => onSort(c.name)}
                   title={`${c.dataType}${c.notNull ? ' · not null' : ''}`}
                 >
                   <span className="inline-flex items-center gap-1.5">
-                    {c.isPrimaryKey ? <KeyRound className="size-3 text-amber-500" /> : null}
-                    <span className="font-mono text-[13px]">{c.name}</span>
-                    <span className="text-[10px] font-normal text-muted-foreground">{c.dataType}</span>
+                    {c.isPrimaryKey ? <KeyRound className="size-3 text-primary" /> : null}
+                    <span className="font-mono text-[13px] text-foreground/90">{c.name}</span>
+                    <span className="text-[11px] font-normal text-muted-foreground">{c.dataType}</span>
                     {active ? (
                       sort!.dir === 'asc' ? (
                         <ArrowUp className="size-3 text-primary" />
@@ -89,8 +89,8 @@ export function EditableGrid({
           {rows.map((row, rowIdx) => {
             const pk = hasPk ? Object.fromEntries(pkCols.map((c) => [c, row[c]])) : null
             return (
-              <tr key={rowIdx} className="group hover:bg-accent/20">
-                <td className="sticky left-0 z-10 w-12 border-b border-r border-border bg-background px-2 py-1 text-center group-hover:bg-accent/20">
+              <tr key={rowIdx} className="group hover:bg-surface-200/50">
+                <td className="sticky left-0 z-10 w-12 border-b border-r border-border bg-background px-2 py-1 text-center group-hover:bg-surface-200/50">
                   {canWrite && pk ? (
                     <button
                       className="text-muted-foreground/40 hover:text-destructive opacity-0 group-hover:opacity-100"

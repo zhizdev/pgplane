@@ -46,13 +46,14 @@ function DatabasePage() {
       <PageHeader title="Database" description="Schemas, tables, columns, indexes & constraints" icon={Database} />
       <div className="flex min-h-0 flex-1">
         {/* left: schema + table list */}
-        <div className="flex w-72 shrink-0 flex-col border-r border-border">
+        <div className="flex w-72 shrink-0 flex-col border-r border-border bg-sidebar">
           <div className="p-3 border-b border-border">
             <Select
               value={schema}
               onValueChange={(v) => navigate({ to: '/database', search: { schema: v } })}
             >
               <SelectTrigger className="w-full">
+                <span className="mr-1 text-muted-foreground">schema</span>
                 <SelectValue placeholder="Select schema" />
               </SelectTrigger>
               <SelectContent>
@@ -64,18 +65,25 @@ function DatabasePage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex-1 overflow-auto p-2 space-y-0.5">
+          <div className="flex-1 overflow-auto p-2 space-y-px">
             {tables.map((t) => (
               <Link
                 key={t.name}
                 to="/database"
                 search={{ schema, table: t.name }}
                 className={cn(
-                  'flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm hover:bg-accent',
-                  t.name === table && 'bg-accent',
+                  'flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] transition-colors',
+                  t.name === table
+                    ? 'bg-surface-200 text-foreground ring-1 ring-inset ring-border'
+                    : 'text-foreground/70 hover:bg-surface-200/60 hover:text-foreground',
                 )}
               >
-                <Table2 className="size-3.5 shrink-0 text-muted-foreground" />
+                <Table2
+                  className={cn(
+                    'size-3.5 shrink-0',
+                    t.name === table ? 'text-primary' : 'text-muted-foreground',
+                  )}
+                />
                 <span className="truncate font-mono text-[13px]">{t.name}</span>
                 {t.kind !== 'table' ? (
                   <Badge variant="outline" className="ml-auto text-[10px] px-1 py-0">
@@ -142,9 +150,9 @@ function TableDetail({
 
       <section>
         <h3 className="text-sm font-medium mb-2">Columns</h3>
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="rounded-lg border border-border bg-surface-100 overflow-hidden">
           <table className="w-full text-sm border-collapse">
-            <thead className="border-b border-border bg-muted/30 text-muted-foreground">
+            <thead className="border-b border-border bg-surface-200/50 text-muted-foreground">
               <tr>
                 <th className="text-left font-medium px-3 py-2">Name</th>
                 <th className="text-left font-medium px-3 py-2">Type</th>
@@ -154,11 +162,11 @@ function TableDetail({
             </thead>
             <tbody className="divide-y divide-border">
               {detail.columns.map((c) => (
-                <tr key={c.name} className="hover:bg-accent/30">
+                <tr key={c.name} className="hover:bg-surface-200/50">
                   <td className="px-3 py-2 font-mono text-[13px]">
                     <span className="inline-flex items-center gap-1.5">
                       {c.isPrimaryKey ? (
-                        <KeyRound className="size-3 text-amber-500" />
+                        <KeyRound className="size-3 text-primary" />
                       ) : null}
                       {c.name}
                     </span>
@@ -180,7 +188,7 @@ function TableDetail({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <section>
           <h3 className="text-sm font-medium mb-2">Indexes</h3>
-          <div className="rounded-xl border border-border bg-card divide-y divide-border">
+          <div className="rounded-lg border border-border bg-surface-100 divide-y divide-border">
             {detail.indexes.map((ix) => (
               <div key={ix.name} className="px-3 py-2.5">
                 <div className="flex items-center gap-2">
@@ -200,7 +208,7 @@ function TableDetail({
 
         <section>
           <h3 className="text-sm font-medium mb-2">Constraints</h3>
-          <div className="rounded-xl border border-border bg-card divide-y divide-border">
+          <div className="rounded-lg border border-border bg-surface-100 divide-y divide-border">
             {detail.constraints.map((c) => (
               <div key={c.name} className="px-3 py-2.5">
                 <div className="flex items-center gap-2">

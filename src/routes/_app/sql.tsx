@@ -1,8 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
-import Editor, { type OnMount } from '@monaco-editor/react'
+import Editor, { type BeforeMount, type OnMount } from '@monaco-editor/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Clock,
+  Copy,
+  Download,
+  ListTree,
   Loader2,
   Play,
   Save,
@@ -32,7 +35,7 @@ import {
   DialogTitle,
 } from '#/components/ui/dialog'
 import { Label } from '#/components/ui/label'
-import { formatDurationMs } from '#/lib/format'
+import { formatCellValue, formatDurationMs } from '#/lib/format'
 import {
   historyStore,
   snippetStore,
@@ -47,6 +50,50 @@ from information_schema.tables
 where table_schema not in ('pg_catalog', 'information_schema')
 order by table_schema, table_name
 limit 100;`
+
+function cellText(v: unknown): string {
+  return v === null || v === undefined ? '' : formatCellValue(v)
+}
+
+function toCsv(columns: string[], rows: Record<string, unknown>[]): string {
+  const esc = (s: string) => (/[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s)
+  const lines = [columns.map(esc).join(',')]
+  for (const r of rows) lines.push(columns.map((c) => esc(cellText(r[c]))).join(','))
+  return lines.join('\r\n')
+}
+
+function toMarkdown(columns: string[], rows: Record<string, unknown>[]): string {
+  const esc = (s: string) => s.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
+  const head = `| ${columns.map(esc).join(' | ')} |`
+  const sep = `| ${columns.map(() => '---').join(' | ')} |`
+  const body = rows.map((r) => `| ${columns.map((c) => esc(cellText(r[c]))).join(' | ')} |`)
+  return [head, sep, ...body].join('\n')
+}
+
+function downloadText(filename: string, text: string, mime: string) {
+  const blob = new Blob([text], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function isExplainPlan(r: QueryResult): boolean {
+  return r.columns.length === 1 && r.columns[0] === 'QUERY PLAN'
+}
 
 export const Route = createFileRoute('/_app/sql')({
   loader: async () => {
@@ -114,6 +161,42 @@ function SqlPage() {
     [],
   )
 
+  const beforeMount: BeforeMount = (monaco) => {
+    monaco.editor.defineTheme('pgplane-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: '', foreground: 'ededed' },
+        { token: 'keyword', foreground: '3ecf8e' },
+        { token: 'keyword.sql', foreground: '3ecf8e' },
+        { token: 'operator.sql', foreground: '8b8b8b' },
+        { token: 'string', foreground: 'f5a623' },
+        { token: 'string.sql', foreground: 'f5a623' },
+        { token: 'number', foreground: 'b07ce8' },
+        { token: 'comment', foreground: '6b6b6b', fontStyle: 'italic' },
+        { token: 'predefined.sql', foreground: '2e9bdd' },
+        { token: 'identifier', foreground: 'ededed' },
+      ],
+      colors: {
+        'editor.background': '#1c1c1c',
+        'editor.foreground': '#ededed',
+        'editorLineNumber.foreground': '#5a5a5a',
+        'editorLineNumber.activeForeground': '#a3a3a3',
+        'editor.selectionBackground': '#3ecf8e33',
+        'editor.inactiveSelectionBackground': '#3ecf8e1f',
+        'editor.lineHighlightBackground': '#ffffff08',
+        'editorCursor.foreground': '#3ecf8e',
+        'editorGutter.background': '#1c1c1c',
+        'editorWidget.background': '#242424',
+        'editorWidget.border': '#2e2e2e',
+        'editorIndentGuide.background1': '#2a2a2a',
+        'editorIndentGuide.activeBackground1': '#3e3e3e',
+        'editorSuggestWidget.background': '#242424',
+        'editorSuggestWidget.selectedBackground': '#2e2e2e',
+      },
+    })
+  }
+
   const onMount: OnMount = (editor, monaco) => {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => run())
   }
@@ -135,11 +218,23 @@ function SqlPage() {
         icon={ScrollText}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => explain(false)} disabled={running}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => explain(false)}
+              disabled={running}
+              title="Show the planner's chosen execution plan for this query — estimates only, the query is not run."
+            >
               <Wand2 className="size-4" /> Explain
             </Button>
             {canWrite ? (
-              <Button variant="ghost" size="sm" onClick={() => explain(true)} disabled={running}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => explain(true)}
+                disabled={running}
+                title="Actually run the query and show the real execution plan with row counts, timings and buffer usage."
+              >
                 Explain analyze
               </Button>
             ) : null}
@@ -155,7 +250,7 @@ function SqlPage() {
         }
       />
       <div className="flex min-h-0 flex-1">
-        <aside className="flex w-64 shrink-0 flex-col border-r border-border">
+        <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-sidebar">
           <Tabs defaultValue="snippets" className="flex h-full flex-col">
             <TabsList className="m-2">
               <TabsTrigger value="snippets" className="flex-1">
@@ -194,9 +289,10 @@ function SqlPage() {
               <Editor
                 height="100%"
                 defaultLanguage="sql"
-                theme="vs-dark"
+                theme="pgplane-dark"
                 value={sql}
                 onChange={(v) => setSql(v ?? '')}
+                beforeMount={beforeMount}
                 onMount={onMount}
                 options={{
                   fontSize: 13,
@@ -278,24 +374,84 @@ function ResultPanel({ result, running }: { result: RunResult; running: boolean 
       </div>
     )
   }
+  if (isExplainPlan(result)) return <PlanView result={result} />
+
+  const data = result
+  const hasRows = data.columns.length > 0
+
+  async function copyMarkdown() {
+    const ok = await copyText(toMarkdown(data.columns, data.rows))
+    if (ok) toast.success('Copied as Markdown')
+    else toast.error('Copy failed', { description: 'Clipboard is unavailable in this context.' })
+  }
+
+  function exportCsv() {
+    downloadText('query-result.csv', toCsv(data.columns, data.rows), 'text/csv;charset=utf-8')
+    toast.success('Exported CSV')
+  }
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b border-border px-4 py-1.5 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">{result.command ?? 'OK'}</span>
-        <span>{result.rowCount} rows</span>
-        <span>{formatDurationMs(result.durationMs)}</span>
+      <div className="flex items-center gap-3 border-b border-border bg-sidebar px-4 py-1.5 text-xs text-muted-foreground">
+        <span className="rounded bg-primary/12 px-1.5 py-0.5 font-medium text-primary">
+          {result.command ?? 'OK'}
+        </span>
+        <span className="tabular-nums">{result.rowCount} rows</span>
+        <span className="tabular-nums">{formatDurationMs(result.durationMs)}</span>
         {result.truncated ? (
           <span className="text-amber-500">showing first {result.rows.length}</span>
         ) : null}
+        {hasRows ? (
+          <div className="ml-auto flex items-center gap-1">
+            <Button variant="ghost" size="xs" onClick={exportCsv} title="Download all rows as CSV">
+              <Download className="size-3.5" /> CSV
+            </Button>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={copyMarkdown}
+              title="Copy a Markdown table to the clipboard"
+            >
+              <Copy className="size-3.5" /> Copy as Markdown
+            </Button>
+          </div>
+        ) : null}
       </div>
       <div className="min-h-0 flex-1">
-        {result.columns.length ? (
+        {hasRows ? (
           <ResultGrid columns={result.columns} rows={result.rows} />
         ) : (
           <div className="grid h-full place-items-center text-sm text-muted-foreground">
             Statement executed — no rows returned.
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function PlanView({ result }: { result: QueryResult }) {
+  const text = result.rows.map((r) => String((r as Record<string, unknown>)['QUERY PLAN'] ?? '')).join('\n')
+  async function copyPlan() {
+    const ok = await copyText(text)
+    if (ok) toast.success('Plan copied')
+    else toast.error('Copy failed')
+  }
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-3 border-b border-border bg-sidebar px-4 py-1.5 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 rounded bg-primary/12 px-1.5 py-0.5 font-medium text-primary">
+          <ListTree className="size-3.5" /> Query plan
+        </span>
+        <span className="tabular-nums">{formatDurationMs(result.durationMs)}</span>
+        <Button variant="ghost" size="xs" className="ml-auto" onClick={copyPlan}>
+          <Copy className="size-3.5" /> Copy
+        </Button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto bg-background p-4">
+        <pre className="w-max whitespace-pre font-mono text-[12.5px] leading-relaxed text-foreground/90">
+          {text}
+        </pre>
       </div>
     </div>
   )
