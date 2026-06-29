@@ -1,18 +1,18 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "pgplane",
-  "compatibility_date": "2025-09-02",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry",
-  "observability": { "enabled": true },
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      // Production: replace with the id from `wrangler hyperdrive create pgplane --connection-string=...`.
-      // Local dev: the connection is supplied via the env var
-      // CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE in .env (see .env.example),
-      // so no secret is ever committed here.
-      "id": "REPLACE_WITH_HYPERDRIVE_ID"
-    }
-  ]
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "pgplane",
+	"compatibility_date": "2025-09-02",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"main": "@tanstack/react-start/server-entry",
+	"observability": {
+		"enabled": true
+	},
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "4cf5506ac7e64a0095607b46bfe88057"
+		}
+	]
 }
