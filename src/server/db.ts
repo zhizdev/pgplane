@@ -39,7 +39,7 @@ export function resolveSource(): Source {
     }
   }
   throw new Error(
-    'No database configured. Set a Hyperdrive binding, DATABASE_URL, or PG* vars in .dev.vars.',
+    'No database configured. Set a Hyperdrive binding, DATABASE_URL, or PG* vars in .env.',
   )
 }
 

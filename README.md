@@ -28,20 +28,32 @@ TanStack Start (Router + Query + Table) · shadcn/ui + Tailwind v4 · Monaco ·
 
 ## Quick start (local)
 
+Everything for local dev lives in a single **`.env`** file (gitignored). Wrangler
+loads it into the Worker automatically — there is no separate `.dev.vars`.
+
 ```bash
 pnpm install
 
-# 1. App config
-cp .dev.vars.example .dev.vars        # set ADMIN_PASSWORD + SESSION_SECRET
+cp .env.example .env
 
-# 2. Database connection (Hyperdrive proxies it from Node in dev)
-cp .env.example .env                  # set the connection string
+# 1. Point CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE at your database
+#    (edit .env).
+
+# 2. Generate a random admin password + session secret straight into .env:
+printf 'ADMIN_PASSWORD=%s\n'  "$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | cut -c1-20)" >> .env
+printf 'SESSION_SECRET=%s\n'  "$(openssl rand -base64 32)" >> .env
 
 pnpm dev                              # → http://localhost:3000
 ```
 
-Sign in with `ADMIN_PASSWORD` (default `pgplane` if unset). Set `AUTH_MODE=none`
-in `.dev.vars` to skip the login during local hacking.
+Sign in with the `ADMIN_PASSWORD` from `.env`. It's the **same variable in dev and
+production**; if you leave it unset the app falls back to the password `pgplane`
+and shows a warning in the UI. To skip the login entirely while hacking locally,
+set `AUTH_MODE=none` in `.env`.
+
+> **Do I still need `.dev.vars`?** No. Wrangler reads `.dev.vars` *or* `.env` — if a
+> `.dev.vars` exists it wins and `.env` is ignored for Worker vars, so pgplane uses a
+> single `.env`. (The Hyperdrive dev connection string is read from `.env` regardless.)
 
 ## Why Hyperdrive (important)
 
@@ -59,6 +71,14 @@ uses it for both dev and production.
 
 ## Deploy to Cloudflare
 
+> **Pages or Workers?** pgplane builds to a **Cloudflare Worker** (SSR `server-entry`
+> + a Hyperdrive binding), so it deploys as a Worker, not a classic Pages site.
+> Cloudflare now recommends Workers for full-stack apps, and the "connect a Git repo,
+> auto-deploy on push" experience people associate with Pages is now **Workers Builds**.
+> Both paths below give you that.
+
+### Option A — CLI (`wrangler deploy`)
+
 ```bash
 # 1. Create a Hyperdrive over your database
 wrangler hyperdrive create pgplane \
@@ -66,13 +86,29 @@ wrangler hyperdrive create pgplane \
 
 # 2. Put the printed id into wrangler.jsonc → hyperdrive[0].id
 
-# 3. App secrets
+# 3. App secrets (encrypted; the same variable names you use in .env)
 wrangler secret put SESSION_SECRET
 wrangler secret put ADMIN_PASSWORD     # or configure Cloudflare Access (below)
 
 # 4. Ship
 pnpm run deploy
 ```
+
+> ⚠️ Wrangler also applies a local `.env` to `wrangler deploy`. Keep real
+> production values in **encrypted secrets** (`wrangler secret put`) or the
+> dashboard — not in a committed file — and either deploy from CI (no `.env`
+> present) or use `wrangler deploy --keep-vars` so dashboard values aren't clobbered.
+
+### Option B — Git CI (Workers Builds, the "Pages" experience)
+
+1. Push this repo to GitHub/GitLab.
+2. Cloudflare dashboard → **Workers & Pages → Create → Workers → Connect to Git**,
+   pick the repo.
+3. Build command `pnpm build`, deploy command `npx wrangler deploy` (or leave the
+   default — Workers Builds detects Wrangler). Every push redeploys.
+4. Add the **Hyperdrive** binding and set `SESSION_SECRET` / `ADMIN_PASSWORD`
+   (and any `CF_ACCESS_*`) under the Worker's **Settings → Variables and Secrets**.
+   There's no `.env` on the build machine, so config comes from the dashboard.
 
 ### Securing it with Cloudflare Access (recommended)
 

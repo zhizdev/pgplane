@@ -10,7 +10,7 @@
       "binding": "HYPERDRIVE",
       // Production: replace with the id from `wrangler hyperdrive create pgplane --connection-string=...`.
       // Local dev: the connection is supplied via the env var
-      // WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE (see .env / .dev.vars.example),
+      // CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE in .env (see .env.example),
       // so no secret is ever committed here.
       "id": "REPLACE_WITH_HYPERDRIVE_ID"
     }

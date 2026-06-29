@@ -1,7 +1,8 @@
 /**
  * Access to runtime configuration. On Cloudflare Workers (and the local
  * workerd dev runtime via @cloudflare/vite-plugin) bindings & vars from
- * wrangler.jsonc / .dev.vars are exposed through `cloudflare:workers`.
+ * wrangler.jsonc / .env (dev) / Worker secrets (prod) are exposed through
+ * `cloudflare:workers`.
  */
 import { env as cfEnv } from 'cloudflare:workers'
 
